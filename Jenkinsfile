@@ -23,12 +23,15 @@ pipeline {
 
         stage('Levantar API') {
             steps {
-                sh 'nohup ./venv/bin/uvicorn backend.main:app --host 0.0.0.0 --port 8000 & sleep 5'
+                // Levantar FastAPI en segundo plano y esperar que responda
+                sh 'nohup ./venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8000 &'
+                sh 'for i in {1..10}; do curl -s http://127.0.0.1:8000 && break || sleep 1; done'
             }
         }
 
         stage('Ejecutar pruebas') {
             steps {
+                // Correr pytest y guardar resultados en formato JUnit para reporte
                 sh './venv/bin/pytest tests/test_api.py --junitxml=report.xml || true'
             }
         }
@@ -45,7 +48,7 @@ pipeline {
             echo '✅ La API funciona correctamente y pasó el control de calidad.'
         }
         failure {
-            echo '❌ La API no pasó el control de calidad. Revisar errores.'
+            echo '❌ La API no pasó el control de calidad. Revisa errores en el reporte.'
         }
     }
 }
