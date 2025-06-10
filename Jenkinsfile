@@ -9,7 +9,7 @@ pipeline {
     stages {
         stage('Clonar repo') {
             steps {
-                git 'https://github.com/ChristopherPalloArias/PALLO-CHRISTOPHER-EXAMENPARCIALPRACTICO.git'
+                git 'https://github.com/ChristopherPalloArias/JenkinsExample.git'
             }
         }
 
