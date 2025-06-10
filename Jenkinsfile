@@ -3,40 +3,49 @@ pipeline {
 
     environment {
         PYTHONUNBUFFERED = '1'
-        GEMINI_API_KEY = credentials('GEMINI_API_KEY')
+        GEMINI_API_KEY = credentials('GEMINI_API_KEY') // Se debe crear como credential en Jenkins
     }
 
     stages {
         stage('Clonar repo') {
             steps {
-                git 'https://github.com/ChristopherPalloArias/JenkinsExample.git'
+                git 'https://github.com/ChristopherPalloArias/PALLO-CHRISTOPHER-EXAMENPARCIALPRACTICO.git'
             }
         }
 
-        stage('Instalar dependencias') {
+        stage('Crear entorno y dependencias') {
             steps {
-                sh 'python3 -m venv venv'
-                sh './venv/bin/pip install --upgrade pip'
-                sh './venv/bin/pip install -r requirements.txt'
+                sh '''
+                python3 -m venv venv
+                ./venv/bin/pip install --upgrade pip
+                ./venv/bin/pip install -r requirements.txt
+                '''
             }
         }
 
-        stage('Levantar API') {
+        stage('Levantar API FastAPI') {
             steps {
-                // Levantar FastAPI en segundo plano y esperar que responda
-                sh 'nohup ./venv/bin/uvicorn backend.main:app --host 127.0.0.1 --port 8000 &'
-                sh 'for i in {1..10}; do curl -s http://127.0.0.1:8000 && break || sleep 1; done'
+                sh '''
+                cd backend
+                nohup ../venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 &
+                for i in {1..15}; do
+                    echo "⌛ Esperando que la API esté lista (intento $i)..."
+                    curl -s http://127.0.0.1:8000 && echo "✅ API lista." && exit 0
+                    sleep 2
+                done
+                echo "❌ Timeout esperando a la API."
+                exit 1
+                '''
             }
         }
 
-        stage('Ejecutar pruebas') {
+        stage('Ejecutar pruebas con Pytest') {
             steps {
-                // Correr pytest y guardar resultados en formato JUnit para reporte
                 sh './venv/bin/pytest tests/test_api.py --junitxml=report.xml || true'
             }
         }
 
-        stage('Publicar resultados') {
+        stage('Publicar resultados de pruebas') {
             steps {
                 junit 'report.xml'
             }
@@ -48,7 +57,7 @@ pipeline {
             echo '✅ La API funciona correctamente y pasó el control de calidad.'
         }
         failure {
-            echo '❌ La API no pasó el control de calidad. Revisa errores en el reporte.'
+            echo '❌ La API no pasó el control de calidad. Revisa los errores.'
         }
     }
 }
