@@ -1,0 +1,65 @@
+pipeline {
+    agent any
+
+    environment {
+        PYTHONUNBUFFERED = '1'
+        GEMINI_API_KEY = credentials('GEMINI_API_KEY')
+    }
+
+    stages {
+        stage('Clonar repo') {
+            steps {
+                git 'https://github.com/ChristopherPalloArias/JenkinsExample.git'
+            }
+        }
+
+        stage('Instalar dependencias') {
+            steps {
+                sh '''
+                    python3 -m venv venv
+                    ./venv/bin/pip install --upgrade pip
+                    ./venv/bin/pip install -r requirements.txt
+                '''
+            }
+        }
+
+        stage('Levantar API') {
+            steps {
+                sh '''
+                    cd backend
+                    nohup ../venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 &
+                    sleep 5
+                '''
+            }
+        }
+
+        stage('Ejecutar pruebas en paralelo') {
+            parallel {
+                stage('Prueba API - URGENTE') {
+                    steps {
+                        sh './venv/bin/pytest tests/test_api.py -k "urgente"'
+                    }
+                }
+                stage('Prueba API - MODERADO') {
+                    steps {
+                        sh './venv/bin/pytest tests/test_api.py -k "moderado"'
+                    }
+                }
+                stage('Prueba API - NORMAL') {
+                    steps {
+                        sh './venv/bin/pytest tests/test_api.py -k "normal"'
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Todas las pruebas paralelas ejecutadas correctamente.'
+        }
+        failure {
+            echo '❌ Falló alguna de las pruebas en paralelo.'
+        }
+    }
+}

@@ -1,0 +1,60 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Clonar repo') {
+            steps {
+                git 'https://github.com/ChristopherPalloArias/JenkinsExample.git'
+            }
+        }
+
+        stage('Ejecutar en múltiples entornos simulados') {
+            parallel {
+                stage('Simular Python 3.10') {
+                    agent any
+                    steps {
+                        sh '''
+                            echo "🧪 Entorno simulado: Python 3.10"
+                            python3 -m venv env310
+                            ./env310/bin/pip install --upgrade pip
+                            ./env310/bin/pip install -r requirements.txt
+                            ./env310/bin/pytest tests/test_api.py --junitxml=report310.xml || true
+                        '''
+                    }
+                    post {
+                        always {
+                            junit 'report310.xml'
+                        }
+                    }
+                }
+
+                stage('Simular Python 3.11') {
+                    agent any
+                    steps {
+                        sh '''
+                            echo "🧪 Entorno simulado: Python 3.11"
+                            python3 -m venv env311
+                            ./env311/bin/pip install --upgrade pip
+                            ./env311/bin/pip install -r requirements.txt
+                            ./env311/bin/pytest tests/test_api.py --junitxml=report311.xml || true
+                        '''
+                    }
+                    post {
+                        always {
+                            junit 'report311.xml'
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Pruebas completadas en entornos simulados (3.10 y 3.11)'
+        }
+        failure {
+            echo '❌ Fallo en alguna simulación de entorno Python.'
+        }
+    }
+}

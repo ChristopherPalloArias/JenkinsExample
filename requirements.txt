@@ -6,3 +6,4 @@ pydantic
 google-genai
 requests
 pytest
+pytest-html

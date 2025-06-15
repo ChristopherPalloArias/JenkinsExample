@@ -1,0 +1,55 @@
+pipeline {
+    agent any
+
+    environment {
+        PYTHONUNBUFFERED = '1'
+    }
+
+    stages {
+        stage('Clonar repo') {
+            steps {
+                git 'https://github.com/ChristopherPalloArias/JenkinsExample.git'
+            }
+        }
+
+        stage('Instalar Bandit y dependencias') {
+            steps {
+                sh '''
+                    python3 -m venv venv
+                    ./venv/bin/pip install --upgrade pip
+                    ./venv/bin/pip install bandit
+                '''
+            }
+        }
+
+        stage('Ejecutar análisis de seguridad') {
+            steps {
+                sh '''
+                    ./venv/bin/bandit -r backend/ -f html -o bandit-report.html || true
+                '''
+            }
+        }
+
+        stage('Publicar reporte de seguridad') {
+            steps {
+                publishHTML([
+                    reportDir: '.',
+                    reportFiles: 'bandit-report.html',
+                    reportName: 'Reporte de Seguridad - Bandit',
+                    keepAll: true,
+                    alwaysLinkToLastBuild: true,
+                    allowMissing: false
+                ])
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Escaneo de seguridad completado y publicado.'
+        }
+        failure {
+            echo '❌ Falló el escaneo de seguridad.'
+        }
+    }
+}
