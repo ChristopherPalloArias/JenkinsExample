@@ -31,8 +31,7 @@ pipeline {
 
         stage('Publicar análisis con Warnings Plugin') {
             steps {
-                // Usar parser genérico declarando el tipo "Bandit"
-                recordIssues tools: [analysisParser(parser: 'Bandit', pattern: 'bandit-report.xml')]
+                recordIssues tools: [bandit(pattern: 'bandit-report.xml')]
             }
         }
     }
