@@ -24,15 +24,15 @@ pipeline {
 
         stage('Ejecutar análisis de seguridad') {
             steps {
-                // Bandit escanea en busca de vulnerabilidades y exporta en XML para análisis visual
+                // Generar un reporte XML que Warnings pueda entender
                 sh './venv/bin/bandit -r backend/ -f xml -o bandit-report.xml || true'
             }
         }
 
         stage('Publicar análisis con Warnings Plugin') {
             steps {
-                // Este paso activa la visualización en Jenkins usando el plugin Warnings
-                recordIssues tools: [bandit(pattern: 'bandit-report.xml')]
+                // Usar parser genérico declarando el tipo "Bandit"
+                recordIssues tools: [analysisParser(parser: 'Bandit', pattern: 'bandit-report.xml')]
             }
         }
     }
