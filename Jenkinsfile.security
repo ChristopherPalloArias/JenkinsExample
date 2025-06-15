@@ -15,28 +15,40 @@ pipeline {
         stage('Instalar Bandit y dependencias') {
             steps {
                 sh '''
-                    # Crear entorno virtual
                     python3 -m venv venv
                     ./venv/bin/pip install --upgrade pip
-                    # Instalar Bandit
                     ./venv/bin/pip install bandit
                 '''
             }
         }
 
-        stage('Ejecutar análisis de seguridad (Bandit JSON)') {
+        stage('Ejecutar análisis de seguridad') {
             steps {
                 sh '''
-                    # Ejecutar Bandit y generar salida en formato JSON
                     ./venv/bin/bandit -r backend/ -f json -o bandit-report.json || true
                 '''
             }
         }
 
-        stage('Publicar análisis con Warnings NG') {
+        stage('Publicar análisis de Bandit con Warnings NG') {
             steps {
+                // Usa generic parser y configura las rutas y formato personalizado
                 recordIssues tools: [
-                    json(name: 'Bandit Security Scan', pattern: 'bandit-report.json')
+                    genericParser(
+                        name: 'Bandit',
+                        pattern: 'bandit-report.json',
+                        reportEncoding: 'UTF-8',
+                        regexp: '"filename":\\s*"(?<file>[^"]+)",.*?"line_number":\\s*(?<line>\\d+),.*?"issue_text":\\s*"(?<message>[^"]+)",.*?"issue_severity":\\s*"(?<severity>[^"]+)"',
+                        script: '''
+                            switch (severity) {
+                                case "LOW": severity = "LOW"; break;
+                                case "MEDIUM": severity = "NORMAL"; break;
+                                case "HIGH": severity = "HIGH"; break;
+                                default: severity = "LOW";
+                            }
+                            return true;
+                        '''
+                    )
                 ]
             }
         }
@@ -44,7 +56,7 @@ pipeline {
 
     post {
         success {
-            echo '✅ Escaneo de seguridad completado y analizado con Warnings NG.'
+            echo '✅ Escaneo de seguridad completado y publicado.'
         }
         failure {
             echo '❌ Falló el escaneo de seguridad.'
