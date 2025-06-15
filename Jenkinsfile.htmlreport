@@ -1,19 +1,19 @@
 pipeline {
-    agent any
+    agent any  // Ejecutar en cualquier agente de Jenkins
 
     environment {
         PYTHONUNBUFFERED = '1'
-        GEMINI_API_KEY = credentials('GEMINI_API_KEY')
+        GEMINI_API_KEY = credentials('GEMINI_API_KEY')  // Cargar clave segura de la API
     }
 
     stages {
-        stage('Clonar repo') {
+        stage('Clonar repo') {  // Obtener el código del repositorio
             steps {
                 git 'https://github.com/ChristopherPalloArias/JenkinsExample.git'
             }
         }
 
-        stage('Crear entorno y dependencias') {
+        stage('Crear entorno y dependencias') {  // Preparar entorno virtual e instalar requirements
             steps {
                 sh '''
                     python3 -m venv venv
@@ -23,13 +23,13 @@ pipeline {
             }
         }
 
-        stage('Levantar API FastAPI') {
+        stage('Levantar API FastAPI') {  // Iniciar el servidor de la API
             steps {
                 sh '''
                     cd backend
                     nohup ../venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 &
-                    sleep 5
-                    for i in {1..15}; do
+                    sleep 5  # Espera a que arranque
+                    for i in {1..15}; do  # Verifica que esté arriba
                         echo "⌛ Esperando que la API esté lista (intento $i)..."
                         curl -s http://127.0.0.1:8000 && echo "✅ API lista." && exit 0
                         sleep 2
@@ -40,19 +40,19 @@ pipeline {
             }
         }
 
-        stage('Ejecutar pruebas con HTML report') {
+        stage('Ejecutar pruebas con HTML report') {  // Correr test y generar archivo HTML bonito
             steps {
                 sh './venv/bin/pytest tests/test_extra.py --html=report.html --self-contained-html || true'
             }
         }
 
-        stage('Publicar reporte HTML') {
+        stage('Publicar reporte HTML') {  // Mostrar ese HTML en la UI de Jenkins
             steps {
                 publishHTML(target: [
                     allowMissing: false,
                     alwaysLinkToLastBuild: true,
                     keepAll: true,
-                    reportDir: '.',
+                    reportDir: '.',  // El HTML está en la raíz del workspace
                     reportFiles: 'report.html',
                     reportName: 'Reporte de Pruebas HTML'
                 ])
