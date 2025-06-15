@@ -1,18 +1,18 @@
 pipeline {
-    agent any  // Ejecuta en cualquier agente disponible
+    agent any
 
     environment {
-        PYTHONUNBUFFERED = '1'  // Mejora visibilidad en logs Python
+        PYTHONUNBUFFERED = '1'
     }
 
     stages {
-        stage('Clonar repo') {  // Descarga tu código desde GitHub
+        stage('Clonar repo') {
             steps {
                 git 'https://github.com/ChristopherPalloArias/JenkinsExample.git'
             }
         }
 
-        stage('Instalar Bandit y dependencias') {  // Prepara entorno virtual e instala Bandit
+        stage('Instalar Bandit y dependencias') {
             steps {
                 sh '''
                     python3 -m venv venv
@@ -22,32 +22,24 @@ pipeline {
             }
         }
 
-        stage('Ejecutar análisis de seguridad') {  // Escanea recursivamente el código en backend/
+        stage('Ejecutar análisis de seguridad') {
             steps {
-                sh '''
-                    ./venv/bin/bandit backend/vulnerable_sample.py -f html -o bandit-report.html || true
-                '''
-                // El `|| true` evita que el pipeline falle aunque se encuentren vulnerabilidades
+                // Bandit escanea en busca de vulnerabilidades y exporta en XML para análisis visual
+                sh './venv/bin/bandit -r backend/ -f xml -o bandit-report.xml || true'
             }
         }
 
-        stage('Publicar reporte de seguridad') {  // Publica el reporte Bandit en formato HTML
+        stage('Publicar análisis con Warnings Plugin') {
             steps {
-                publishHTML([
-                    reportDir: '.',
-                    reportFiles: 'bandit-report.html',
-                    reportName: 'Reporte de Seguridad - Bandit',
-                    keepAll: true,
-                    alwaysLinkToLastBuild: true,
-                    allowMissing: false
-                ])
+                // Este paso activa la visualización en Jenkins usando el plugin Warnings
+                recordIssues tools: [bandit(pattern: 'bandit-report.xml')]
             }
         }
     }
 
     post {
         success {
-            echo '✅ Escaneo de seguridad completado y publicado.'
+            echo '✅ Escaneo de seguridad completado y visualizado.'
         }
         failure {
             echo '❌ Falló el escaneo de seguridad.'
