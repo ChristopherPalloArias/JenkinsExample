@@ -1,21 +1,21 @@
 pipeline {
-    agent any
+	agent any
 
     environment {
-        PYTHONUNBUFFERED = '1'
+		PYTHONUNBUFFERED = '1'
         GEMINI_API_KEY = credentials('GEMINI_API_KEY') // Se debe crear como credential en Jenkins
     }
 
     stages {
-        stage('Clonar repo') {
-            steps {
-                git 'https://github.com/ChristopherPalloArias/JenkinsExample.git'
+		stage('Clonar repo') {
+			steps {
+				git 'https://github.com/ChristopherPalloArias/JenkinsExample.git'
             }
         }
 
         stage('Crear entorno y dependencias') {
-            steps {
-                sh '''
+			steps {
+				sh '''
                 python3 -m venv venv
                 ./venv/bin/pip install --upgrade pip
                 ./venv/bin/pip install -r requirements.txt
@@ -24,40 +24,41 @@ pipeline {
         }
 
         stage('Levantar API FastAPI') {
-            steps {
-                sh '''
-                cd backend
-                nohup ../venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 &
-                for i in {1..15}; do
-                    echo "⌛ Esperando que la API esté lista (intento $i)..."
-                    curl -s http://127.0.0.1:8000 && echo "✅ API lista." && exit 0
-                    sleep 2
-                done
-                echo "❌ Timeout esperando a la API."
-                exit 1
-                '''
+			steps {
+				sh '''
+                    cd backend
+                    nohup ../venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 &
+                    sleep 5
+                    for i in {1..15}; do
+                        echo "⌛ Esperando que la API esté lista (intento $i)..."
+                        curl -s http://127.0.0.1:8000 && echo "✅ API lista." && exit 0
+                        sleep 2
+                    done
+                    echo "❌ Timeout esperando a la API."
+                    exit 1
+                    '''
             }
         }
 
         stage('Ejecutar pruebas con Pytest') {
-            steps {
-                sh './venv/bin/pytest tests/test_api.py --junitxml=report.xml || true'
+			steps {
+				sh './venv/bin/pytest tests/test_api.py --junitxml=report.xml || true'
             }
         }
 
         stage('Publicar resultados de pruebas') {
-            steps {
-                junit 'report.xml'
+			steps {
+				junit 'report.xml'
             }
         }
     }
 
     post {
-        success {
-            echo '✅ La API funciona correctamente y pasó el control de calidad.'
+		success {
+			echo '✅ La API funciona correctamente y pasó el control de calidad.'
         }
         failure {
-            echo '❌ La API no pasó el control de calidad. Revisa los errores.'
+			echo '❌ La API no pasó el control de calidad. Revisa los errores.'
         }
     }
 }
