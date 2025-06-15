@@ -45,6 +45,11 @@ pipeline {
                         sh './venv/bin/pytest tests/test_api.py -k "normal"'
                     }
                 }
+                stage('Prueba General - test_extra.py') {
+                    steps {
+                        sh './venv/bin/pytest tests/test_extra.py'
+                    }
+                }
             }
         }
     }
