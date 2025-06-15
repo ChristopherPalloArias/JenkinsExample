@@ -1,19 +1,19 @@
 pipeline {
-    agent any
+    agent any  // Ejecutar en cualquier agente disponible de Jenkins
 
     environment {
         PYTHONUNBUFFERED = '1'
-        GEMINI_API_KEY = credentials('GEMINI_API_KEY')
+        GEMINI_API_KEY = credentials('GEMINI_API_KEY')  // Carga segura de credencial de API
     }
 
     stages {
-        stage('Clonar repo') {
+        stage('Clonar repo') {  // Primera etapa: Clonar el repositorio desde GitHub
             steps {
                 git 'https://github.com/ChristopherPalloArias/JenkinsExample.git'
             }
         }
 
-        stage('Instalar dependencias') {
+        stage('Instalar dependencias') {  // Segunda etapa: Preparar el entorno virtual e instalar librerías
             steps {
                 sh '''
                     python3 -m venv venv
@@ -23,38 +23,38 @@ pipeline {
             }
         }
 
-        stage('Levantar API') {
+        stage('Levantar API') {  // Tercera etapa: Iniciar el servidor FastAPI
             steps {
                 sh '''
                     cd backend
                     nohup ../venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 &
-                    sleep 5
+                    sleep 5  # Espera unos segundos para asegurarse que el servidor arranque bien
                 '''
             }
         }
 
-        stage('Ejecutar pruebas en paralelo') {
+        stage('Ejecutar pruebas en paralelo') {  // Cuarta etapa: Ejecutar diferentes pruebas de forma simultánea
             parallel {
-                stage('Prueba API - URGENTE') {
+                stage('Prueba API - URGENTE') {  // Subetapa 1: Test específico para clasificaciones urgentes
                     steps {
-                        sh './venv/bin/pytest tests/test_api.py -k "urgente"'
+                        sh './venv/bin/pytest -s tests/test_api.py -k "urgente"'
                     }
                 }
-                stage('Prueba API - NORMAL') {
+                stage('Prueba API - NORMAL') {  // Subetapa 2: Test específico para clasificaciones normales
                     steps {
-                        sh './venv/bin/pytest tests/test_api.py -k "normal"'
+                        sh './venv/bin/pytest -s tests/test_api.py -k "normal"'
                     }
                 }
-                stage('Prueba General - test_extra.py') {
+                stage('Prueba General - test_extra.py') {  // Subetapa 3: Un test adicional con validaciones generales de respuesta
                     steps {
-                        sh './venv/bin/pytest tests/test_extra.py'
+                        sh './venv/bin/pytest -s tests/test_extra.py'
                     }
                 }
             }
         }
     }
 
-    post {
+    post {  // Sección final: mensajes de éxito o fallo del pipeline
         success {
             echo '✅ Todas las pruebas paralelas ejecutadas correctamente.'
         }
