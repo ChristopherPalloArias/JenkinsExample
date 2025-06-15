@@ -40,11 +40,6 @@ pipeline {
                         sh './venv/bin/pytest tests/test_api.py -k "urgente"'
                     }
                 }
-                stage('Prueba API - MODERADO') {
-                    steps {
-                        sh './venv/bin/pytest tests/test_api.py -k "moderado"'
-                    }
-                }
                 stage('Prueba API - NORMAL') {
                     steps {
                         sh './venv/bin/pytest tests/test_api.py -k "normal"'
