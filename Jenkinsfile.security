@@ -22,23 +22,24 @@ pipeline {
             }
         }
 
-        stage('Ejecutar análisis de seguridad') {
+        stage('Ejecutar Bandit con SARIF') {
             steps {
-                // Generar un reporte XML que Warnings pueda entender
-                sh './venv/bin/bandit -r backend/ -f xml -o bandit-report.xml || true'
+                sh '''
+                    ./venv/bin/bandit -r backend/ -f sarif -o bandit-report.sarif || true
+                '''
             }
         }
 
-        stage('Publicar análisis con Warnings Plugin') {
+        stage('Publicar análisis con Warnings NG') {
             steps {
-                recordIssues tools: [bandit(pattern: 'bandit-report.xml')]
+                recordIssues tools: [sarif(pattern: 'bandit-report.sarif')]
             }
         }
     }
 
     post {
         success {
-            echo '✅ Escaneo de seguridad completado y visualizado.'
+            echo '✅ Escaneo de seguridad completado y publicado.'
         }
         failure {
             echo '❌ Falló el escaneo de seguridad.'
