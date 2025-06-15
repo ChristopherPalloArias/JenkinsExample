@@ -25,7 +25,10 @@ pipeline {
         stage('Ejecutar Bandit con SARIF') {
             steps {
                 sh '''
+                    cd $WORKSPACE
                     ./venv/bin/bandit -r backend/ -f sarif -o bandit-report.sarif || true
+                    echo "📂 Archivos generados:"
+                    ls -lh bandit-report.sarif || echo "❌ No se generó el SARIF"
                 '''
             }
         }
@@ -39,10 +42,10 @@ pipeline {
 
     post {
         success {
-            echo '✅ Escaneo de seguridad completado y publicado.'
+            echo '✅ Escaneo de seguridad completado y analizado con Warnings NG.'
         }
         failure {
-            echo '❌ Falló el escaneo de seguridad.'
+            echo '❌ Falló el escaneo o análisis de seguridad.'
         }
     }
 }
