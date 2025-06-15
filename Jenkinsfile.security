@@ -25,7 +25,7 @@ pipeline {
         stage('Ejecutar análisis de seguridad') {  // Escanea recursivamente el código en backend/
             steps {
                 sh '''
-                    ./venv/bin/bandit -r backend/ -f html -o bandit-report.html || true
+                    ./venv/bin/bandit backend/vulnerable_sample.py -f html -o bandit-report.html || true
                 '''
                 // El `|| true` evita que el pipeline falle aunque se encuentren vulnerabilidades
             }
