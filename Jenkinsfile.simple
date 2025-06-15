@@ -1,19 +1,19 @@
 pipeline {
-    agent any
+    agent any  // Ejecutar en cualquier agente disponible de Jenkins
 
     environment {
         PYTHONUNBUFFERED = '1'
-        GEMINI_API_KEY = credentials('GEMINI_API_KEY')
+        GEMINI_API_KEY = credentials('GEMINI_API_KEY')  // Carga segura de la API key para usar Gemini
     }
 
     stages {
-        stage('Clonar repo') {
+        stage('Clonar repo') {  // Etapa 1: Clonar el repositorio de GitHub
             steps {
                 git 'https://github.com/ChristopherPalloArias/JenkinsExample.git'
             }
         }
 
-        stage('Crear entorno y dependencias') {
+        stage('Crear entorno y dependencias') {  // Etapa 2: Crear entorno virtual e instalar dependencias
             steps {
                 sh '''
                     python3 -m venv venv
@@ -23,30 +23,33 @@ pipeline {
             }
         }
 
-        stage('Levantar API FastAPI') {
+        stage('Levantar API FastAPI') {  // Etapa 3: Iniciar la API y esperar confirmación de que esté funcionando
             steps {
                 sh '''
                     cd backend
                     nohup ../venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 &
-                    sleep 5
+                    sleep 5  # Pausa para permitir que la API arranque
+
+                    # Verifica si la API está respondiendo correctamente
                     for i in {1..15}; do
-                        echo "⌛ Esperando que la API esté lista (intento $i)..."
+                        echo "Esperando que la API esté lista (intento $i)..."
                         curl -s http://127.0.0.1:8000 && echo "✅ API lista." && exit 0
                         sleep 2
                     done
+
                     echo "❌ Timeout esperando a la API."
                     exit 1
                 '''
             }
         }
 
-        stage('Ejecutar pruebas con Pytest') {
+        stage('Ejecutar pruebas con Pytest') {  // Etapa 4: Ejecutar las pruebas unitarias
             steps {
-                sh './venv/bin/pytest tests/test_api.py --junitxml=report.xml || true'
+                sh './venv/bin/pytest -s tests/test_api.py --junitxml=report.xml || true'
             }
         }
 
-        stage('Publicar resultados de pruebas') {
+        stage('Publicar resultados de pruebas') {  // Etapa 5: Mostrar el reporte en Jenkins
             steps {
                 junit 'report.xml'
             }
