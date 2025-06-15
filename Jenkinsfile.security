@@ -15,27 +15,29 @@ pipeline {
         stage('Instalar Bandit y dependencias') {
             steps {
                 sh '''
+                    # Crear entorno virtual
                     python3 -m venv venv
                     ./venv/bin/pip install --upgrade pip
+                    # Instalar Bandit
                     ./venv/bin/pip install bandit
                 '''
             }
         }
 
-        stage('Ejecutar Bandit con SARIF') {
+        stage('Ejecutar análisis de seguridad (Bandit JSON)') {
             steps {
                 sh '''
-                    cd $WORKSPACE
-                    ./venv/bin/bandit -r backend/ -f sarif -o bandit-report.sarif || true
-                    echo "📂 Archivos generados:"
-                    ls -lh bandit-report.sarif || echo "❌ No se generó el SARIF"
+                    # Ejecutar Bandit y generar salida en formato JSON
+                    ./venv/bin/bandit -r backend/ -f json -o bandit-report.json || true
                 '''
             }
         }
 
         stage('Publicar análisis con Warnings NG') {
             steps {
-                recordIssues tools: [sarif(pattern: 'bandit-report.sarif')]
+                recordIssues tools: [
+                    json(name: 'Bandit Security Scan', pattern: 'bandit-report.json')
+                ]
             }
         }
     }
@@ -45,7 +47,7 @@ pipeline {
             echo '✅ Escaneo de seguridad completado y analizado con Warnings NG.'
         }
         failure {
-            echo '❌ Falló el escaneo o análisis de seguridad.'
+            echo '❌ Falló el escaneo de seguridad.'
         }
     }
 }
