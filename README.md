@@ -5,10 +5,9 @@ Este proyecto demuestra la aplicación práctica de **frameworks de control de c
 Se toma como caso de estudio una **aplicación IA que clasifica mensajes según urgencia** usando Gemini (Google AI), expuesta vía FastAPI y con interfaz en Streamlit.
 
 ---
-## 👨‍💻 Autor
 
-**Grupo N°8**  
-Ingeniería en Sistemas de Información – Universidad Central del Ecuador  
+## 👨‍💻 Grupo N°8 - Programación para Dispositivos Móviles 
+
 Exposición: **Frameworks de Control de Calidad**  
 Caso práctico: **Clasificación Inteligente de Mensajes con IA y Validación Continua con Jenkins**
 
