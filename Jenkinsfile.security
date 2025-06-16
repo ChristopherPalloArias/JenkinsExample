@@ -34,7 +34,7 @@ pipeline {
 
         stage('Publicar análisis con Warnings NG') {
             steps {
-                recordIssues tools: [bandit(pattern: 'bandit-report.xml')]
+                recordIssues tools: [analysisParser(parser: 'Bandit', pattern: 'bandit-report.xml')]
             }
         }
     }
