@@ -11,7 +11,7 @@ pipeline {
             steps {
                 // Limpiar workspace antes de clonar
                 cleanWs()
-                git branch: 'main', url: 'https://github.com/ChristopherPalloArias/JenkinsExample.git'
+                git branch: 'master', url: 'https://github.com/ChristopherPalloArias/JenkinsExample.git'
             }
         }
 
