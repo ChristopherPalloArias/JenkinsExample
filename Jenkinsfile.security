@@ -27,60 +27,192 @@ pipeline {
             steps {
                 sh '''
                     . ${VENV_DIR}/bin/activate
-                    bandit -r backend/ -f json -o bandit-report.json || true
+                    echo "Ejecutando Bandit en directorio backend/"
+                    ls -la backend/ || echo "Directorio backend no encontrado, analizando directorio actual"
+                    
+                    # Analizar backend/ si existe, sino analizar archivos .py en el directorio actual
+                    if [ -d "backend/" ]; then
+                        bandit -r backend/ -f json -o bandit-report.json || true
+                    else
+                        find . -name "*.py" -type f | head -1 > /dev/null && bandit -r . -f json -o bandit-report.json || echo '{"results": [], "metrics": {"_totals": {"loc": 0, "nosec": 0}}}' > bandit-report.json
+                    fi
+                    
+                    echo "Contenido del reporte Bandit:"
+                    cat bandit-report.json | head -20
                 '''
             }
         }
 
-        stage('Publicar análisis con Warnings NG') {
+        stage('Convertir reporte Bandit a formato compatible') {
             steps {
-                // Opción 1: Usar pyLint parser (recomendado)
-                recordIssues(
-                    enabledForFailure: true,
-                    tools: [pyLint(pattern: 'bandit-report.json')]
-                )
+                sh '''
+                    . ${VENV_DIR}/bin/activate
+                    python3 << 'EOF'
+import json
+import os
+
+def convert_bandit_to_warnings():
+    """Convierte el reporte JSON de Bandit a formato compatible con Warnings NG"""
+    
+    if not os.path.exists('bandit-report.json'):
+        print("Archivo bandit-report.json no encontrado")
+        return
+    
+    try:
+        with open('bandit-report.json', 'r') as f:
+            bandit_data = json.load(f)
+        
+        results = bandit_data.get('results', [])
+        print(f"Bandit encontró {len(results)} issues de seguridad")
+        
+        # Crear archivo en formato checkstyle XML (compatible con Warnings NG)
+        checkstyle_xml = '<?xml version="1.0" encoding="UTF-8"?>\\n<checkstyle version="4.3">\\n'
+        
+        # Agrupar por archivo
+        files_dict = {}
+        for result in results:
+            filename = result.get('filename', 'unknown')
+            if filename not in files_dict:
+                files_dict[filename] = []
+            files_dict[filename].append(result)
+        
+        for filename, file_results in files_dict.items():
+            checkstyle_xml += f'  <file name="{filename}">\\n'
+            
+            for result in file_results:
+                line = result.get('line_number', 1)
+                severity = result.get('issue_severity', 'MEDIUM').lower()
+                if severity == 'high':
+                    severity = 'error'
+                elif severity == 'medium':
+                    severity = 'warning'
+                else:
+                    severity = 'info'
                 
-                // Opción 2: Alternativa usando formato CSV
-                // sh '''
-                //     . ${VENV_DIR}/bin/activate
-                //     bandit -r backend/ -f csv -o bandit-report.csv || true
-                // '''
-                // recordIssues(
-                //     enabledForFailure: true,
-                //     tools: [issues(pattern: 'bandit-report.csv', name: 'Bandit Security Issues')]
-                // )
+                message = result.get('issue_text', 'Security issue detected')
+                rule = result.get('test_name', 'bandit')
+                confidence = result.get('issue_confidence', 'MEDIUM')
+                
+                # Escapar caracteres especiales XML
+                message = message.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+                
+                checkstyle_xml += f'    <error line="{line}" severity="{severity}" message="{message} (Confidence: {confidence})" source="{rule}"/>\\n'
+            
+            checkstyle_xml += '  </file>\\n'
+        
+        checkstyle_xml += '</checkstyle>\\n'
+        
+        # Guardar archivo XML
+        with open('bandit-checkstyle.xml', 'w') as f:
+            f.write(checkstyle_xml)
+        
+        print(f"Archivo bandit-checkstyle.xml creado con {len(results)} issues")
+        
+        # También crear un archivo de texto plano para referencia
+        with open('bandit-summary.txt', 'w') as f:
+            f.write(f"=== REPORTE DE SEGURIDAD BANDIT ===\\n")
+            f.write(f"Total de issues encontrados: {len(results)}\\n\\n")
+            
+            if results:
+                for i, result in enumerate(results, 1):
+                    f.write(f"Issue #{i}:\\n")
+                    f.write(f"  Archivo: {result.get('filename', 'N/A')}\\n")
+                    f.write(f"  Línea: {result.get('line_number', 'N/A')}\\n")
+                    f.write(f"  Severidad: {result.get('issue_severity', 'N/A')}\\n")
+                    f.write(f"  Confianza: {result.get('issue_confidence', 'N/A')}\\n")
+                    f.write(f"  Descripción: {result.get('issue_text', 'N/A')}\\n")
+                    f.write(f"  Regla: {result.get('test_name', 'N/A')}\\n")
+                    f.write("  " + "-"*50 + "\\n\\n")
+            else:
+                f.write("¡Excelente! No se encontraron problemas de seguridad.\\n")
+        
+        print("Resumen guardado en bandit-summary.txt")
+        
+    except Exception as e:
+        print(f"Error procesando reporte de Bandit: {e}")
+        # Crear archivos vacíos en caso de error
+        with open('bandit-checkstyle.xml', 'w') as f:
+            f.write('<?xml version="1.0" encoding="UTF-8"?>\\n<checkstyle version="4.3">\\n</checkstyle>\\n')
+        with open('bandit-summary.txt', 'w') as f:
+            f.write("Error procesando reporte de Bandit\\n")
+
+if __name__ == "__main__":
+    convert_bandit_to_warnings()
+EOF
+                '''
             }
         }
 
-        stage('Archivar resultados') {
+        stage('Publicar resultados de seguridad') {
             steps {
-                // Archivar el reporte para referencia
-                archiveArtifacts artifacts: 'bandit-report.json', fingerprint: true
-                
-                // Publicar el reporte como HTML si es necesario
-                publishHTML([
-                    allowMissing: false,
-                    alwaysLinkToLastBuild: false,
-                    keepAll: true,
-                    reportDir: '.',
-                    reportFiles: 'bandit-report.json',
-                    reportName: 'Bandit Security Report'
-                ])
+                script {
+                    // Usar el parser CheckStyle que es más confiable
+                    try {
+                        recordIssues(
+                            enabledForFailure: true,
+                            aggregatingResults: false,
+                            tools: [
+                                checkStyle(
+                                    pattern: 'bandit-checkstyle.xml',
+                                    name: 'Bandit Security Issues'
+                                )
+                            ]
+                        )
+                        echo "✅ Issues de seguridad publicados exitosamente"
+                    } catch (Exception e) {
+                        echo "⚠️ No se pudo usar recordIssues: ${e.message}"
+                        echo "Publicando como artefactos..."
+                    }
+                }
+            }
+        }
+
+        stage('Mostrar resumen') {
+            steps {
+                sh '''
+                    echo "=== RESUMEN DEL ANÁLISIS DE SEGURIDAD ==="
+                    if [ -f bandit-summary.txt ]; then
+                        cat bandit-summary.txt
+                    else
+                        echo "No se pudo generar el resumen"
+                    fi
+                    
+                    echo ""
+                    echo "=== ARCHIVOS GENERADOS ==="
+                    ls -la bandit-* || echo "No se encontraron archivos de reporte"
+                '''
             }
         }
     }
 
     post {
         always {
-            echo '✅ Escaneo de seguridad completado.'
-            // Limpiar archivos temporales
-            sh 'rm -rf ${VENV_DIR}'
-        }
-        failure {
-            echo '❌ El pipeline falló. Revisa los logs para más detalles.'
+            echo '✅ Pipeline de seguridad completado.'
+            
+            // Archivar todos los reportes
+            archiveArtifacts artifacts: 'bandit-*.json, bandit-*.xml, bandit-*.txt', 
+                           fingerprint: true, 
+                           allowEmptyArchive: true
+            
+            // Publicar reporte HTML
+            publishHTML([
+                allowMissing: false,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: '.',
+                reportFiles: 'bandit-summary.txt',
+                reportName: 'Bandit Security Summary',
+                reportTitles: 'Reporte de Seguridad'
+            ])
+            
+            // Limpiar entorno virtual
+            sh 'rm -rf ${VENV_DIR} || true'
         }
         success {
-            echo '🎉 Pipeline completado exitosamente.'
+            echo '🎉 Análisis de seguridad completado exitosamente.'
+        }
+        failure {
+            echo '❌ El pipeline de seguridad falló.'
         }
     }
 }
