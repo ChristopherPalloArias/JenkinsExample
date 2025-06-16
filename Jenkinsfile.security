@@ -27,14 +27,45 @@ pipeline {
             steps {
                 sh '''
                     . ${VENV_DIR}/bin/activate
-                    bandit -r backend/ -f xml -o bandit-report.xml || true
+                    bandit -r backend/ -f json -o bandit-report.json || true
                 '''
             }
         }
 
         stage('Publicar análisis con Warnings NG') {
             steps {
-                recordIssues tools: [analysisParser(parser: 'Bandit', pattern: 'bandit-report.xml')]
+                // Opción 1: Usar pyLint parser (recomendado)
+                recordIssues(
+                    enabledForFailure: true,
+                    tools: [pyLint(pattern: 'bandit-report.json')]
+                )
+                
+                // Opción 2: Alternativa usando formato CSV
+                // sh '''
+                //     . ${VENV_DIR}/bin/activate
+                //     bandit -r backend/ -f csv -o bandit-report.csv || true
+                // '''
+                // recordIssues(
+                //     enabledForFailure: true,
+                //     tools: [issues(pattern: 'bandit-report.csv', name: 'Bandit Security Issues')]
+                // )
+            }
+        }
+
+        stage('Archivar resultados') {
+            steps {
+                // Archivar el reporte para referencia
+                archiveArtifacts artifacts: 'bandit-report.json', fingerprint: true
+                
+                // Publicar el reporte como HTML si es necesario
+                publishHTML([
+                    allowMissing: false,
+                    alwaysLinkToLastBuild: false,
+                    keepAll: true,
+                    reportDir: '.',
+                    reportFiles: 'bandit-report.json',
+                    reportName: 'Bandit Security Report'
+                ])
             }
         }
     }
@@ -42,6 +73,14 @@ pipeline {
     post {
         always {
             echo '✅ Escaneo de seguridad completado.'
+            // Limpiar archivos temporales
+            sh 'rm -rf ${VENV_DIR}'
+        }
+        failure {
+            echo '❌ El pipeline falló. Revisa los logs para más detalles.'
+        }
+        success {
+            echo '🎉 Pipeline completado exitosamente.'
         }
     }
 }
