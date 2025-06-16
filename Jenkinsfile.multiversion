@@ -94,7 +94,7 @@ EOF
                             // Archivar reporte de tests
                             archiveArtifacts artifacts: 'report310.xml', fingerprint: true, allowEmptyArchive: true
                             // Publicar resultados de tests usando junit
-                            junit testResultsPattern: 'report310.xml', allowEmptyResults: true
+                            junit testResults: 'report310.xml', allowEmptyResults: true
                         }
                     }
                 }
@@ -135,7 +135,7 @@ EOF
                             // Archivar reporte de tests
                             archiveArtifacts artifacts: 'report311.xml', fingerprint: true, allowEmptyArchive: true
                             // Publicar resultados de tests usando junit
-                            junit testResultsPattern: 'report311.xml', allowEmptyResults: true
+                            junit testResults: 'report311.xml', allowEmptyResults: true
                         }
                     }
                 }
