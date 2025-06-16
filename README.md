@@ -11,6 +11,7 @@ Se toma como caso de estudio una **aplicación IA que clasifica mensajes según 
 Ingeniería en Sistemas de Información – Universidad Central del Ecuador  
 Exposición: **Frameworks de Control de Calidad**  
 Caso práctico: **Clasificación Inteligente de Mensajes con IA y Validación Continua con Jenkins**
+
 ---
 
 ## 🎯 Objetivo del Proyecto
