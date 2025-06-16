@@ -1,65 +1,48 @@
 pipeline {
-    agent any
+  agent any
 
-    environment {
-        PYTHONUNBUFFERED = '1'
+  environment {
+    VENV_DIR = "venv"
+    BANDIT_REPORT = "bandit-report.xml"
+  }
+
+  stages {
+    stage('Clonar repo') {
+      steps {
+        git 'https://github.com/ChristopherPalloArias/JenkinsExample.git'
+      }
     }
 
-    stages {
-        stage('Clonar repo') {
-            steps {
-                git 'https://github.com/ChristopherPalloArias/JenkinsExample.git'
-            }
-        }
-
-        stage('Instalar Bandit y dependencias') {
-            steps {
-                sh '''
-                    python3 -m venv venv
-                    ./venv/bin/pip install --upgrade pip
-                    ./venv/bin/pip install bandit
-                '''
-            }
-        }
-
-        stage('Ejecutar análisis de seguridad') {
-            steps {
-                sh '''
-                    ./venv/bin/bandit -r backend/ -f json -o bandit-report.json || true
-                '''
-            }
-        }
-
-        stage('Publicar análisis de Bandit con Warnings NG') {
-            steps {
-                // Usa generic parser y configura las rutas y formato personalizado
-                recordIssues tools: [
-                    genericParser(
-                        name: 'Bandit',
-                        pattern: 'bandit-report.json',
-                        reportEncoding: 'UTF-8',
-                        regexp: '"filename":\\s*"(?<file>[^"]+)",.*?"line_number":\\s*(?<line>\\d+),.*?"issue_text":\\s*"(?<message>[^"]+)",.*?"issue_severity":\\s*"(?<severity>[^"]+)"',
-                        script: '''
-                            switch (severity) {
-                                case "LOW": severity = "LOW"; break;
-                                case "MEDIUM": severity = "NORMAL"; break;
-                                case "HIGH": severity = "HIGH"; break;
-                                default: severity = "LOW";
-                            }
-                            return true;
-                        '''
-                    )
-                ]
-            }
-        }
+    stage('Instalar Bandit y dependencias') {
+      steps {
+        sh '''
+          python3 -m venv ${VENV_DIR}
+          . ${VENV_DIR}/bin/activate
+          pip install --upgrade pip
+          pip install bandit
+        '''
+      }
     }
 
-    post {
-        success {
-            echo '✅ Escaneo de seguridad completado y publicado.'
-        }
-        failure {
-            echo '❌ Falló el escaneo de seguridad.'
-        }
+    stage('Ejecutar análisis de seguridad') {
+      steps {
+        sh '''
+          . ${VENV_DIR}/bin/activate
+          bandit -r backend/ -f xml -o ${BANDIT_REPORT} || true
+        '''
+      }
     }
+
+    stage('Publicar análisis con Warnings NG') {
+      steps {
+        recordIssues tools: [bandit(pattern: "${BANDIT_REPORT}")]
+      }
+    }
+  }
+
+  post {
+    always {
+      echo '✅ Escaneo de seguridad completado.'
+    }
+  }
 }
