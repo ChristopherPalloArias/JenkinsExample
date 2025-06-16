@@ -38,6 +38,30 @@ Implementar un sistema completo de validación continua aplicando frameworks de 
 
 ---
 
+## 🖥️ Instalación de Jenkins (Opcional)
+
+Si deseas implementar estos pipelines en tu propio entorno, necesitas tener **Jenkins** instalado previamente.
+
+### 🔧 ¿Cómo instalar Jenkins?
+
+A continuación, se proporcionan dos tutoriales en video, uno para cada sistema operativo. Ambos explican paso a paso cómo instalar y dejar funcionando Jenkins localmente.
+
+| Sistema Operativo | Tutorial en YouTube |
+|----------------|----------------------|
+| 🪟 Windows      | [Ver tutorial](https://www.youtube.com/watch?v=3OY3A6XE6Us) |
+| 🐧 Linux  | [Ver tutorial](https://www.youtube.com/watch?v=2_V-rXOpPKo&t=4s) |
+
+> ⚠️ Recomendación: Tras instalar Jenkins, asegúrate de instalar los plugins:
+> - **Warnings Next Generation**
+> - **HTML Publisher**
+> - **Git Plugin**
+> - **Pipeline**
+> - **Script Security**
+
+Además, configura credenciales en Jenkins si necesitas usar claves de API (como `GEMINI_API_KEY`).
+
+---
+
 ## 📁 Pipelines Desarrollados en Jenkins
 
 Se implementaron 4 pipelines enfocados en **aspectos clave del control de calidad**:
