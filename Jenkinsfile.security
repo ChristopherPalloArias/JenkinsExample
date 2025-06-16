@@ -1,48 +1,47 @@
 pipeline {
-  agent any
+    agent any
 
-  environment {
-    VENV_DIR = "venv"
-    BANDIT_REPORT = "bandit-report.xml"
-  }
-
-  stages {
-    stage('Clonar repo') {
-      steps {
-        git 'https://github.com/ChristopherPalloArias/JenkinsExample.git'
-      }
+    environment {
+        VENV = 'venv'
     }
 
-    stage('Instalar Bandit y dependencias') {
-      steps {
-        sh '''
-          python3 -m venv ${VENV_DIR}
-          . ${VENV_DIR}/bin/activate
-          pip install --upgrade pip
-          pip install bandit
-        '''
-      }
+    stages {
+        stage('Clonar repo') {
+            steps {
+                git url: 'https://github.com/ChristopherPalloArias/JenkinsExample.git', branch: 'master'
+            }
+        }
+
+        stage('Instalar Bandit y dependencias') {
+            steps {
+                sh '''
+                    python3 -m venv $VENV
+                    . $VENV/bin/activate
+                    pip install --upgrade pip
+                    pip install bandit
+                '''
+            }
+        }
+
+        stage('Ejecutar análisis de seguridad') {
+            steps {
+                sh '''
+                    . $VENV/bin/activate
+                    bandit -r backend/ -f xml -o bandit-report.xml || true
+                '''
+            }
+        }
+
+        stage('Publicar análisis con Warnings NG') {
+            steps {
+                recordIssues tools: [issueParser(parserName: 'Bandit', pattern: 'bandit-report.xml')]
+            }
+        }
     }
 
-    stage('Ejecutar análisis de seguridad') {
-      steps {
-        sh '''
-          . ${VENV_DIR}/bin/activate
-          bandit -r backend/ -f xml -o ${BANDIT_REPORT} || true
-        '''
-      }
+    post {
+        always {
+            echo '✅ Escaneo de seguridad completado.'
+        }
     }
-
-    stage('Publicar análisis con Warnings NG') {
-      steps {
-        recordIssues tools: [bandit(pattern: "${BANDIT_REPORT}")]
-      }
-    }
-  }
-
-  post {
-    always {
-      echo '✅ Escaneo de seguridad completado.'
-    }
-  }
 }
