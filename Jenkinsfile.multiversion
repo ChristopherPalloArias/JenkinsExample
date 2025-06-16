@@ -11,7 +11,18 @@ pipeline {
             steps {
                 // Limpiar workspace antes de clonar
                 cleanWs()
-                git branch: 'master', url: 'https://github.com/ChristopherPalloArias/JenkinsExample.git'
+                script {
+                    try {
+                        // Intentar clonar con main primero
+                        git branch: 'main', url: 'https://github.com/ChristopherPalloArias/JenkinsExample.git'
+                        echo "📥 Repositorio clonado usando rama 'main'"
+                    } catch (Exception e) {
+                        echo "⚠️  Rama 'main' no encontrada, intentando con 'master'"
+                        // Si falla, usar master
+                        git branch: 'master', url: 'https://github.com/ChristopherPalloArias/JenkinsExample.git'
+                        echo "📥 Repositorio clonado usando rama 'master'"
+                    }
+                }
             }
         }
 
@@ -82,8 +93,8 @@ EOF
                         always {
                             // Archivar reporte de tests
                             archiveArtifacts artifacts: 'report310.xml', fingerprint: true, allowEmptyArchive: true
-                            // Publicar resultados de tests
-                            publishTestResults testResultsPattern: 'report310.xml'
+                            // Publicar resultados de tests usando junit
+                            junit testResultsPattern: 'report310.xml', allowEmptyResults: true
                         }
                     }
                 }
@@ -123,8 +134,8 @@ EOF
                         always {
                             // Archivar reporte de tests
                             archiveArtifacts artifacts: 'report311.xml', fingerprint: true, allowEmptyArchive: true
-                            // Publicar resultados de tests
-                            publishTestResults testResultsPattern: 'report311.xml'
+                            // Publicar resultados de tests usando junit
+                            junit testResultsPattern: 'report311.xml', allowEmptyResults: true
                         }
                     }
                 }
